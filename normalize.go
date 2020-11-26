@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,25 +14,25 @@ import (
 	"sync"
 )
 
-const (
-	// scaleFactor can be tweaked to control how loud your files will overall
-	// be. Look at the output for an example file and make it twice as large if
-	// you want to. The original value was chosen to make mp3s have the right
-	// loudness for the radio in my car.
-	scaleFactor = 1400
-
-	// parallel determines how many conversions happen in parallel. If you run
-	// out of memory or your CPU catches fire, this might be set too high.
-	parallel = 8
-)
-
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), `Usage of %s: first pass the flags you want (see below), then pass any number of paths.
+  Each path can be either a file which is then normalized or a folder.
+  From each given folder all MP3 files will be normalized.
+  If you pass no path at all, all MP3 files in the current working directory are normalized.
+`, os.Args[0])
+		flag.PrintDefaults()
+	}
+	scaleFactor := flag.Int("ampl", 1400, "Determines the amplitude. Increase this value to make songs louder.")
+	parallel := flag.Int("proc", 8, "Processes to start in parallel. Adjust this value so your CPU does not catch fire.")
+	flag.Parse()
+
 	// User is expected to pass:
 	// - the path to a single sound file or
 	// - the path to a directory in which all mp3 files will be converted or
 	// - nothing, in this case all mp3 files in the current directory are
 	//   converted.
-	files, err := readFilesFromArgs(os.Args[1:])
+	files, err := readFilesFromArgs(flag.Args())
 	if err != nil {
 		panic(err)
 	}
@@ -47,11 +48,15 @@ func main() {
 	var wg sync.WaitGroup
 	paths := make(chan string)
 
-	for i := 0; i < parallel; i++ {
+	n := *parallel
+	if n < 1 {
+		n = 1
+	}
+	for i := 0; i < n; i++ {
 		go func() {
 			for {
 				path := <-paths
-				err := normalizeFile(path, tempWavDir)
+				err := normalizeFile(path, tempWavDir, float64(*scaleFactor))
 				if err != nil {
 					fmt.Println("ERROR", path, err)
 				}
@@ -71,39 +76,37 @@ func main() {
 }
 
 func readFilesFromArgs(args []string) ([]string, error) {
-	var path string
-	if len(os.Args) == 1 {
-		path = "."
-	} else if len(os.Args) == 2 {
-		path = os.Args[1]
-	} else {
-		return nil, errors.New("wrong arguments, give none or one path")
-	}
-
-	pathInfo, err := os.Stat(path)
-	if err != nil {
-		return nil, err
+	if len(args) == 0 {
+		args = []string{"."}
 	}
 
 	var files []string
-	if !pathInfo.IsDir() {
-		files = []string{path}
-	} else {
-		all, err := ioutil.ReadDir(path)
+	for _, path := range args {
+		pathInfo, err := os.Stat(path)
 		if err != nil {
 			return nil, err
 		}
-		for _, f := range all {
-			if !f.IsDir() {
-				files = append(files, filepath.Join(path, f.Name()))
+
+		if pathInfo.IsDir() {
+			all, err := ioutil.ReadDir(path)
+			if err != nil {
+				return nil, err
 			}
+
+			for _, f := range all {
+				if !f.IsDir() && strings.HasSuffix(strings.ToLower(f.Name()), ".mp3") {
+					files = append(files, filepath.Join(path, f.Name()))
+				}
+			}
+		} else {
+			files = append(files, path)
 		}
 	}
 
 	return files, nil
 }
 
-func normalizeFile(path, tempDir string) error {
+func normalizeFile(path, tempDir string, scaleFactor float64) error {
 	fileName := filepath.Base(path)
 	wavPath := filepath.Join(tempDir, fileName+".temp.wav")
 	defer os.Remove(wavPath)
@@ -112,7 +115,7 @@ func normalizeFile(path, tempDir string) error {
 		return err
 	}
 
-	changed, err := normalizeWavFile(wavPath)
+	changed, err := normalizeWavFile(wavPath, scaleFactor)
 	if err != nil {
 		return err
 	}
@@ -156,7 +159,7 @@ func runFFMPEG(cmd *exec.Cmd) error {
 	return nil
 }
 
-func normalizeWavFile(wavPath string) (bool, error) {
+func normalizeWavFile(wavPath string, scaleFactor float64) (bool, error) {
 	f, err := os.OpenFile(wavPath, os.O_RDWR, 0666)
 	if err != nil {
 		return false, err
