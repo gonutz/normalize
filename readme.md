@@ -27,13 +27,15 @@ where the -u option is to get the latest version online on Github.
 Usage
 -----
 
-normalize -ampl=1400 -proc=8 "path/to/file.mp3" "folder/of/mp3s/"
+	normalize -ampl=1400 -proc=8 "path/to/file.mp3" "folder/of/mp3s/"
 
 Pass the options first:
-  -ampl int
-    Determines the amplitude. Increase this value to make songs louder. (default 1400)
-  -proc int
-    Processes to start in parallel. Adjust this value so your CPU does not catch fire. (default 8)
+
+	-ampl int
+		Determines the amplitude. Increase this value to make songs louder. (default 1400)
+	-proc int
+		Processes to start in parallel. Adjust this value so your CPU does not catch fire. (default 8)
+
 Both are optional.
 
 After the options, pass your files and folders.
