@@ -5,12 +5,12 @@ This program relies on ffmpeg being installed and available in the PATH.
 Installation
 ------------
 
-Install Go:
+Install [Go](https://golang.org/dl/):
 
 	https://golang.org/dl/
 
 
-Download ffmpeg:
+Download [ffmpeg](https://ffmpeg.org/download.html):
 
 	https://ffmpeg.org/download.html
 
