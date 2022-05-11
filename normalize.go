@@ -16,13 +16,13 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), `
-  Usage of %s: first pass the flags you want (see below), then pass any number
-               of paths.
+		fmt.Fprintf(flag.CommandLine.Output(), ``+
+			`  Usage of %s: first pass the flags you want (see below), then pass
+    any number of paths.
   Each path can be either a file which is then normalized or a folder.
   From each given folder all MP3 files will be normalized.
   If you pass no path at all, all MP3 files in the current working directory
-  are normalized.
+    are normalized.
 `, os.Args[0])
 		flag.PrintDefaults()
 	}
