@@ -16,15 +16,27 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), `Usage of %s: first pass the flags you want (see below), then pass any number of paths.
+		fmt.Fprintf(flag.CommandLine.Output(), `
+  Usage of %s: first pass the flags you want (see below), then pass any number
+               of paths.
   Each path can be either a file which is then normalized or a folder.
   From each given folder all MP3 files will be normalized.
-  If you pass no path at all, all MP3 files in the current working directory are normalized.
+  If you pass no path at all, all MP3 files in the current working directory
+  are normalized.
 `, os.Args[0])
 		flag.PrintDefaults()
 	}
-	scaleFactor := flag.Int("ampl", 1400, "Determines the amplitude. Increase this value to make songs louder.")
-	parallel := flag.Int("proc", 8, "Processes to start in parallel. Adjust this value so your CPU does not catch fire.")
+	scaleFactor := flag.Int(
+		"ampl",
+		3200,
+		"Determines the amplitude. Increase this value to make songs louder.",
+	)
+	parallel := flag.Int(
+		"proc",
+		8,
+		"Processes to start in parallel. Adjust this value so your CPU does "+
+			"not catch fire.",
+	)
 	flag.Parse()
 
 	// User is expected to pass:
@@ -94,7 +106,8 @@ func readFilesFromArgs(args []string) ([]string, error) {
 			}
 
 			for _, f := range all {
-				if !f.IsDir() && strings.HasSuffix(strings.ToLower(f.Name()), ".mp3") {
+				if !f.IsDir() &&
+					strings.HasSuffix(strings.ToLower(f.Name()), ".mp3") {
 					files = append(files, filepath.Join(path, f.Name()))
 				}
 			}
@@ -184,7 +197,8 @@ func normalizeWavFile(wavPath string, scaleFactor float64) (bool, error) {
 	for {
 		n, err := f.Read(buf[:])
 		if n%2 == 1 {
-			return false, errors.New("read odd number of bytes in int16 sample stream")
+			return false,
+				errors.New("read odd number of bytes in int16 sample stream")
 		}
 		for i := 0; i < n; i += 2 {
 			sample := int16(binary.LittleEndian.Uint16(buf[i:]))
@@ -225,7 +239,8 @@ func normalizeWavFile(wavPath string, scaleFactor float64) (bool, error) {
 			return false, err
 		}
 		if n%2 == 1 {
-			return false, errors.New("read odd number of bytes in int16 sample stream")
+			return false,
+				errors.New("read odd number of bytes in int16 sample stream")
 		}
 		for i := 0; i < n; i += 2 {
 			sample := int16(binary.LittleEndian.Uint16(buf[i:]))
