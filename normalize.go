@@ -192,6 +192,8 @@ func normalizeWavFile(wavPath string, scaleFactor float64) (bool, error) {
 	var (
 		buf   [4096]byte
 		sum   uint64
+		min   int16
+		max   int16
 		count int
 	)
 	for {
@@ -208,6 +210,12 @@ func normalizeWavFile(wavPath string, scaleFactor float64) (bool, error) {
 			} else {
 				sum += uint64(sample)
 			}
+			if sample < min {
+				min = sample
+			}
+			if sample > max {
+				max = sample
+			}
 			count++
 		}
 		if err == io.EOF {
@@ -218,11 +226,17 @@ func normalizeWavFile(wavPath string, scaleFactor float64) (bool, error) {
 		}
 	}
 
-	// The scale is computed from the average amplitude of the WAV file.
-	scale := scaleFactor * float64(count) / float64(sum)
-	if 0.9 < scale && scale < 1.1 {
-		// If the file is already normalized, do not do it again.
-		return false, nil
+	// The scale is computed from the average amplitude of the WAV file. Also we
+	// do not allow clipping, i.e. we do not scale to more than a 16 bit in can
+	// hold.
+	avg := float64(count) / float64(sum)
+	if -min > max {
+		max = -min
+	}
+	maxScale := 32767.0 / float64(max)
+	scale := scaleFactor * avg
+	if scale > maxScale {
+		scale = maxScale
 	}
 
 	// Now we skip back to the start and overwrite the file with the scaled
