@@ -49,6 +49,13 @@ func main() {
 		panic(err)
 	}
 
+	var mp3s []string
+	for _, file := range files {
+		if strings.HasSuffix(strings.ToLower(file), ".mp3") {
+			mp3s = append(mp3s, file)
+		}
+	}
+
 	// We will write WAV files to a temporary folder in the process.
 	tempWavDir, err := ioutil.TempDir("", "normalize")
 	if err != nil {
@@ -77,14 +84,24 @@ func main() {
 		}()
 	}
 
-	for _, file := range files {
-		if strings.HasSuffix(strings.ToLower(file), ".mp3") {
-			wg.Add(1)
-			paths <- file
-		}
+	lastMsgLen := 0
+	wg.Add(len(mp3s))
+	for i, mp3 := range mp3s {
+		paths <- mp3
+		msg := fmt.Sprintf(
+			"%d / %d (%.0f%%)",
+			i+1,
+			len(mp3s),
+			100*float64(i+1)/float64(len(mp3s)),
+		)
+		msg = strings.Repeat("\b", lastMsgLen) + msg
+		fmt.Print(msg)
+		lastMsgLen = len(msg)
 	}
 
 	wg.Wait()
+
+	fmt.Println()
 }
 
 func readFilesFromArgs(args []string) ([]string, error) {
